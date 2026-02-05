@@ -1,0 +1,14 @@
+{
+  "name": "claude-mobile-terminal",
+  "version": "1.0.0",
+  "description": "Access Claude Code from your mobile device via WiFi",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "node-pty": "^1.0.0",
+    "ws": "^8.18.0"
+  }
+}

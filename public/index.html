@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Claude Terminal</title>
+
+  <!-- xterm.js from CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0d0f14;
+      --surface: #161922;
+      --border: #2a2e3a;
+      --accent: #d4a574;
+      --accent-dim: #a07850;
+      --text: #c8ccd4;
+      --text-dim: #6b7280;
+      --green: #7ec699;
+      --red: #e06c75;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      touch-action: manipulation;
+    }
+
+    /* ── Layout ─────────────────────────────────── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      height: 100dvh; /* dynamic viewport for mobile */
+    }
+
+    /* ── Top bar ────────────────────────────────── */
+    #topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    #topbar .title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+    }
+
+    #status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    #status .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      transition: background 0.3s;
+    }
+
+    #status.connected .dot {
+      background: var(--green);
+    }
+
+    /* ── Terminal area ──────────────────────────── */
+    #terminal-wrap {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #terminal-wrap .xterm {
+      padding: 8px;
+    }
+
+    /* ── Quick keys toolbar ─────────────────────── */
+    #quickkeys {
+      display: flex;
+      gap: 4px;
+      padding: 6px 8px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      overflow-x: auto;
+      flex-shrink: 0;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    #quickkeys::-webkit-scrollbar { display: none; }
+
+    .qk {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      background: #1e2130;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+
+    .qk:active {
+      background: var(--accent-dim);
+      color: var(--bg);
+      transform: scale(0.95);
+    }
+
+    .qk.accent {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    /* ── Connection overlay ─────────────────────── */
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13, 15, 20, 0.92);
+      z-index: 100;
+      gap: 16px;
+      transition: opacity 0.4s;
+    }
+
+    #overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #overlay .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #overlay .label {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    #reconnect-btn {
+      margin-top: 8px;
+      padding: 10px 24px;
+      background: var(--accent-dim);
+      color: var(--bg);
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="topbar">
+      <span class="title">⬡ CLAUDE TERMINAL</span>
+      <div id="status">
+        <span class="dot"></span>
+        <span class="text">connecting</span>
+      </div>
+    </div>
+
+    <div id="terminal-wrap">
+      <div id="overlay">
+        <div class="spinner"></div>
+        <div class="label">Connecting to host…</div>
+        <button id="reconnect-btn" onclick="connect()">Reconnect</button>
+      </div>
+    </div>
+
+    <div id="quickkeys">
+      <button class="qk accent" data-send="claude\r">claude</button>
+      <button class="qk accent" data-send="claude -с\r">claude -с</button>
+      <button class="qk" data-send="\x03">Ctrl+C</button>
+      <button class="qk" data-send="\x04">Ctrl+D</button>
+      <button class="qk" data-send="\x1b">Esc</button>
+      <button class="qk" data-send="\t">Tab</button>
+      <button class="qk" data-send="\x1b[A">↑</button>
+      <button class="qk" data-send="\x1b[B">↓</button>
+      <button class="qk" data-send="\x1b[D">←</button>
+      <button class="qk" data-send="\x1b[C">→</button>
+      <button class="qk" data-send="y">y</button>
+      <button class="qk" data-send="n">n</button>
+      <button class="qk" data-send="\r">Enter</button>
+      <button class="qk" data-send="clear\r">clear</button>
+    </div>
+  </div>
+
+  <script>
+    // ── Terminal setup ──────────────────────────────
+    const fitAddon = new FitAddon.FitAddon();
+    const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+
+    const term = new Terminal({
+      cursorBlink: true,
+      cursorStyle: "bar",
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: 14,
+      lineHeight: 1.3,
+      scrollback: 5000,
+      theme: {
+        background: "#0d0f14",
+        foreground: "#c8ccd4",
+        cursor: "#d4a574",
+        cursorAccent: "#0d0f14",
+        selectionBackground: "rgba(212, 165, 116, 0.25)",
+        black: "#1e2130",
+        red: "#e06c75",
+        green: "#7ec699",
+        yellow: "#e5c07b",
+        blue: "#61afef",
+        magenta: "#c678dd",
+        cyan: "#56b6c2",
+        white: "#c8ccd4",
+        brightBlack: "#6b7280",
+        brightRed: "#e06c75",
+        brightGreen: "#7ec699",
+        brightYellow: "#e5c07b",
+        brightBlue: "#61afef",
+        brightMagenta: "#c678dd",
+        brightCyan: "#56b6c2",
+        brightWhite: "#ffffff",
+      },
+    });
+
+    term.loadAddon(fitAddon);
+    term.loadAddon(webLinksAddon);
+    term.open(document.getElementById("terminal-wrap"));
+
+    function fitTerminal() {
+      try {
+        fitAddon.fit();
+      } catch {}
+    }
+
+    fitTerminal();
+    window.addEventListener("resize", fitTerminal);
+
+    // Also refit when the virtual keyboard appears/disappears
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", () => {
+        setTimeout(fitTerminal, 100);
+      });
+    }
+
+    // ── WebSocket connection ────────────────────────
+    let ws = null;
+
+    const statusEl = document.getElementById("status");
+    const statusText = statusEl.querySelector(".text");
+    const overlay = document.getElementById("overlay");
+    const overlayLabel = overlay.querySelector(".label");
+    const reconnectBtn = document.getElementById("reconnect-btn");
+
+    function setStatus(connected) {
+      if (connected) {
+        statusEl.classList.add("connected");
+        statusText.textContent = "connected";
+      } else {
+        statusEl.classList.remove("connected");
+        statusText.textContent = "disconnected";
+      }
+    }
+
+    function connect() {
+      reconnectBtn.style.display = "none";
+      overlayLabel.textContent = "Connecting to host…";
+      overlay.classList.remove("hidden");
+
+      const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${protocol}//${location.host}`);
+
+      ws.onopen = () => {
+        setStatus(true);
+        overlay.classList.add("hidden");
+        term.focus();
+
+        // send initial size
+        const dims = fitAddon.proposeDimensions();
+        if (dims) {
+          ws.send(JSON.stringify({ type: "resize", cols: dims.cols, rows: dims.rows }));
+        }
+      };
+
+      ws.onmessage = (evt) => {
+        try {
+          const msg = JSON.parse(evt.data);
+          if (msg.type === "output") {
+            term.write(msg.data);
+          } else if (msg.type === "exit") {
+            term.writeln("\r\n\x1b[33m[Session ended]\x1b[0m");
+          }
+        } catch {
+          term.write(evt.data);
+        }
+      };
+
+      ws.onclose = () => {
+        setStatus(false);
+        overlayLabel.textContent = "Connection lost";
+        reconnectBtn.style.display = "block";
+        overlay.classList.remove("hidden");
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    // ── Terminal input → WebSocket ──────────────────
+    term.onData((data) => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "input", data }));
+      }
+    });
+
+    term.onResize(({ cols, rows }) => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "resize", cols, rows }));
+      }
+    });
+
+    // Also sync size on window resize
+    window.addEventListener("resize", () => {
+      setTimeout(() => {
+        const dims = fitAddon.proposeDimensions();
+        if (dims && ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "resize", cols: dims.cols, rows: dims.rows }));
+        }
+      }, 150);
+    });
+
+    // ── Quick keys ──────────────────────────────────
+    document.querySelectorAll(".qk").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const data = btn.dataset.send;
+        if (data && ws && ws.readyState === WebSocket.OPEN) {
+          // Interpret escape sequences
+          const decoded = data
+            .replace(/\\r/g, "\r")
+            .replace(/\\n/g, "\n")
+            .replace(/\\t/g, "\t")
+            .replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+            .replace(/\\x1b/g, "\x1b");
+          ws.send(JSON.stringify({ type: "input", data: decoded }));
+        }
+        term.focus();
+      });
+    });
+
+    // ── Start ───────────────────────────────────────
+    connect();
+  </script>
+</body>
+</html>
