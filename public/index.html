@@ -141,6 +141,23 @@
       color: var(--accent);
     }
 
+    /* ── Voice button ────────────────────────────── */
+    #voice-btn.listening {
+      background: var(--red);
+      color: white;
+      border-color: var(--red);
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    #voice-btn.unsupported {
+      display: none;
+    }
+
     /* ── Connection overlay ─────────────────────── */
     #overlay {
       position: absolute;
