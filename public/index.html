@@ -245,7 +245,9 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { VoiceInput } from './js/voice-input.js';
+
     // ── Terminal setup ──────────────────────────────
     const fitAddon = new FitAddon.FitAddon();
     const webLinksAddon = new WebLinksAddon.WebLinksAddon();
@@ -410,6 +412,34 @@
 
     // ── Start ───────────────────────────────────────
     connect();
+
+    // ── Voice input ─────────────────────────────────
+    const voiceBtn = document.getElementById("voice-btn");
+
+    if (!VoiceInput.isSupported()) {
+      voiceBtn.classList.add("unsupported");
+    } else {
+      const voice = new VoiceInput(
+        // onResult
+        (text, isCommand) => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "input", data: text }));
+          }
+          voiceBtn.classList.remove("listening");
+        },
+        // onError
+        (error) => {
+          console.warn("Voice error:", error);
+          voiceBtn.classList.remove("listening");
+        }
+      );
+
+      voiceBtn.addEventListener("click", () => {
+        const listening = voice.toggle();
+        voiceBtn.classList.toggle("listening", listening);
+        term.focus();
+      });
+    }
   </script>
 </body>
 </html>
