@@ -60,3 +60,30 @@ npm start       # Start server on port 3033 (or PORT env var)
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT`   | `3033`  | Server port |
+
+## Code Style
+
+- Write code comments in English
+- Use `const` over `let`; avoid `var`
+- Use meaningful variable names
+
+## Git
+
+### Protected Branches
+
+- **NEVER commit directly to `dev` or `main`** — always use feature branches
+- `dev` is the default integration branch
+- `main` is for stable releases
+
+### Branch Workflow
+
+1. Update dev: `git checkout dev && git pull --rebase`
+2. Create feature branch: `git checkout -b feature/name`
+3. After work: rebase onto dev (`git rebase dev`)
+4. Create Pull Request, merge with squash
+
+### Commit Rules
+
+- Commit messages in English
+- Conventional commits: `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `chore:`
+- No co-authors in commit messages

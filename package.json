@@ -4,7 +4,8 @@
   "description": "Access Claude Code from your mobile device via WiFi",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "express": "^4.21.0",
