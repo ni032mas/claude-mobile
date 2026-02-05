@@ -16,9 +16,10 @@ const VOICE_COMMANDS = {
 };
 
 export class VoiceInput {
-  constructor(onResult, onError) {
+  constructor(onResult, onError, onEnd) {
     this.onResult = onResult;
     this.onError = onError;
+    this.onEnd = onEnd;
     this.isListening = false;
     this.recognition = null;
 
@@ -38,20 +39,28 @@ export class VoiceInput {
     this.recognition.continuous = false;
     this.recognition.interimResults = false;
 
+    this.recognition.onstart = () => {
+      console.log("[Voice] Started listening");
+    };
+
     this.recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript.toLowerCase().trim();
+      console.log("[Voice] Recognized:", transcript);
       const command = VOICE_COMMANDS[transcript];
       const output = command || transcript + "\r";
       this.onResult?.(output, !!command);
     };
 
     this.recognition.onerror = (event) => {
+      console.warn("[Voice] Error:", event.error);
       this.isListening = false;
       this.onError?.(event.error);
     };
 
     this.recognition.onend = () => {
+      console.log("[Voice] Ended");
       this.isListening = false;
+      this.onEnd?.();
     };
   }
 
@@ -66,8 +75,13 @@ export class VoiceInput {
       this.recognition.stop();
       this.isListening = false;
     } else {
-      this.recognition.start();
-      this.isListening = true;
+      try {
+        this.recognition.start();
+        this.isListening = true;
+      } catch (e) {
+        this.isListening = false;
+        this.onError?.("start: " + e.message);
+      }
     }
 
     return this.isListening;

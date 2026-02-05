@@ -229,7 +229,7 @@
     <div id="quickkeys">
       <button class="qk" id="voice-btn">🎤</button>
       <button class="qk accent" data-send="claude\r">claude</button>
-      <button class="qk accent" data-send="claude -с\r">claude -с</button>
+      <button class="qk accent" data-send="claude -c\r">claude -с</button>
       <button class="qk" data-send="\x03">Ctrl+C</button>
       <button class="qk" data-send="\x04">Ctrl+D</button>
       <button class="qk" data-send="\x1b">Esc</button>
@@ -415,30 +415,44 @@
 
     // ── Voice input ─────────────────────────────────
     const voiceBtn = document.getElementById("voice-btn");
+    const debugStatus = (msg) => {
+      statusText.textContent = msg;
+      setTimeout(() => {
+        statusText.textContent = ws?.readyState === WebSocket.OPEN ? "connected" : "disconnected";
+      }, 2000);
+    };
+
+    debugStatus("Voice: init");
 
     if (!VoiceInput.isSupported()) {
       voiceBtn.classList.add("unsupported");
+      debugStatus("Voice: not supported");
     } else {
       const voice = new VoiceInput(
         // onResult
         (text, isCommand) => {
+          debugStatus("Voice: " + text.substring(0, 15));
           if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: "input", data: text }));
           }
-          voiceBtn.classList.remove("listening");
         },
         // onError
         (error) => {
-          console.warn("Voice error:", error);
+          debugStatus("Voice err: " + error);
+        },
+        // onEnd - always reset button state
+        () => {
           voiceBtn.classList.remove("listening");
         }
       );
 
       voiceBtn.addEventListener("click", () => {
         const listening = voice.toggle();
+        debugStatus(listening ? "Voice: listening..." : "Voice: stopped");
         voiceBtn.classList.toggle("listening", listening);
         term.focus();
       });
+      debugStatus("Voice: ready");
     }
   </script>
 </body>
