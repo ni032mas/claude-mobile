@@ -13,6 +13,7 @@ npm install     # Install dependencies (requires build tools for node-pty)
 npm start       # Start server on port 3033 (or PORT env var)
 ```
 
+**macOS prerequisite**: Xcode Command Line Tools (`xcode-select --install`) for node-pty compilation.
 **Windows prerequisite**: Visual Studio Build Tools with "Desktop development with C++" for node-pty compilation.
 
 ## Architecture
@@ -27,7 +28,7 @@ npm start       # Start server on port 3033 (or PORT env var)
                                                  ▼
                                         ┌──────────────────┐
                                         │   Shell (PTY)    │
-                                        │ powershell/bash  │
+                                        │ powershell/zsh   │
                                         └──────────────────┘
 ```
 

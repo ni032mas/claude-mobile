@@ -6,16 +6,21 @@
 
 ### 1. Установи зависимости
 
-```bash
-cd claude-mobile
-npm install
-```
+> **macOS**: для сборки `node-pty` нужны Xcode Command Line Tools:
+> ```bash
+> xcode-select --install
+> ```
 
 > **Windows**: для `node-pty` нужны build tools. Если ещё не установлены:
 > ```bash
 > npm install -g windows-build-tools
 > ```
 > Или установи Visual Studio Build Tools с компонентом "Desktop development with C++".
+
+```bash
+cd claude-mobile
+npm install
+```
 
 ### 2. Запусти сервер
 
@@ -65,11 +70,14 @@ PORT=8080 npm start
 ## Troubleshooting
 
 **Не могу подключиться с телефона**
+
 - Убедись, что телефон и компьютер в одной WiFi сети
 - Проверь файрвол — разреши входящие на порт 3033
+- macOS: Системные настройки → Сеть → Брандмауэр → убедись, что Node.js не заблокирован (или выключи файрвол для тестирования)
 - Windows: `netsh advfirewall firewall add rule name="Claude Terminal" dir=in action=allow protocol=TCP localport=3033`
 
 **node-pty не устанавливается**
+
+- macOS: `xcode-select --install` (нужны Command Line Tools)
 - Windows: нужны Visual Studio Build Tools + Python
-- macOS: `xcode-select --install`
 - Linux: `sudo apt install build-essential python3`
