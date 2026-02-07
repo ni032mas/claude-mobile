@@ -6,7 +6,10 @@ const path = require("path");
 const pty = require("node-pty");
 
 const PORT = process.env.PORT || 3033;
-const SHELL = os.platform() === "win32" ? "powershell.exe" : "bash";
+const SHELL =
+  os.platform() === "win32"
+    ? "powershell.exe"
+    : process.env.SHELL || "/bin/zsh";
 
 const app = express();
 const server = http.createServer(app);
